@@ -11,7 +11,7 @@ export default {
         sub
             .setName('set')
             .setDescription('Sets the channel for the logs to go in')
-            .addStringOption((o) =>
+            .addChannelOption((o) =>
                 o.setName('channel')
                 .setDescription('choice of log channel')
                 .addChannelTypes(ChannelType.GuildText)
