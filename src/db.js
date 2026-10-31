@@ -29,7 +29,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id        TEXT PRIMARY KEY,
         log_channel_id  TEXT,
-        log_active      INTEGER NOT NULL DEFAULT 0
+        log_active      TEXT NOT NULL DEFAULT false
     );
 
     CREATE TABLE IF NOT EXISTS active_sessions (
@@ -82,20 +82,21 @@ export const endSession = db.transaction((userId) => {
 export const setLogChannel = (guildId, channelId) =>
     db.prepare(`
         INSERT INTO guild_settings (guild_id, log_channel_id) VALUES (?, ?)
-        ON CONFLICT(guild_id) DO UDPATE SET log_channel_id = excluded.log_channel_id   
+        ON CONFLICT(guild_id) DO UPDATE SET log_channel_id = excluded.log_channel_id   
     `).run(guildId, channelId);
 
 export const clearLogChannel = (guildId) =>
-    db.prepare('UPDATE guild_settings SET log_channel_id = NULL WEHRE guild_id = ?').run(guildId);
+    db.prepare('UPDATE guild_settings SET log_channel_id = NULL WHERE guild_id = ?').run(guildId);
 
 export const getLogChannel = (guildId) =>
-    db.prepare('SELECT log_channel_id FROM guild_settings WEHRE guild_id = ?').get(guildId)?.log_channel_id ?? null;
+    db.prepare('SELECT log_channel_id FROM guild_settings WHERE guild_id = ?').get(guildId)?.log_channel_id ?? null;
 
-export const getLogStatus = (guildId) =>
-    db.prepare('SELECT log_active FROM guild_settings WEHRE log_active = ?').get(guildId)?.log_active;
+export const getLogStatus = (guildId) => {
+    return db.prepare('SELECT log_active FROM guild_settings WHERE log_active = ?').get(guildId)?.log_active === "false" ? false: true;
+}
 
 export const setLogStatus = (guildId, status) => {
-    const active = status === 0 ? false : true;
+    const active = status === false ? "false": "true";
     db.prepare('UPDATE guild_settings SET log_active = ? WHERE guild_id = ?').run(active, guildId);
 }
 export default db;

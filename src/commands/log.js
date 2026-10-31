@@ -1,5 +1,5 @@
 import { InteractionContextType, SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, Message } from 'discord.js';
-import { setLogChannel, clearLogChannel, getLogChannel, getLogStatus } from '../db.js';
+import { setLogChannel, clearLogChannel, getLogChannel, getLogStatus, setLogStatus } from '../db.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -52,54 +52,64 @@ export default {
                     content: `Finished study sessions will now be logged in ${channel}.`,
                     flags: MessageFlags.Ephemeral
                 });
+
+                break;
             }
 
             case 'start': {
-                if (!getLogChannel()) {
-                    interaction.reply({
+                if (!getLogChannel(interaction.guildId)) {
+                    await interaction.reply({
                         content: "you must set a channel first before you can start logging",
                         flags: MessageFlags.Ephemeral
                     });
 
                     return;
                 }
-                if (getLogStatus(interaction.guildId) === 1) {
-                    interaction.reply({
+                if (getLogStatus(interaction.guildId)) {
+                    await interaction.reply({
                         content: "The logging is already active",
                         flags: MessageFlags.Ephemeral
                     });
+
+                    return;
                 }
 
                 setLogStatus(interaction.guildID, true);
 
-                interaction.reply({
+                await interaction.reply({
                     content: "Logging is now active!",
                     flags: MessageFlags.Ephemeral
                 })
+
+                break;
             }
 
             case 'stop': {
                 if (!getLogChannel(interaction.guildId)) {
-                    interaction.reply({
+                    await interaction.reply({
                         content: "you must set a channel first before you can stop logging",
                         flags: MessageFlags.Ephemeral
                     });
                     
                     return;
                 }
-                if (getLogStatus(interaction.guildId) === 0) {
-                    interaction.reply({
+                if (!getLogStatus(interaction.guildId)) {
+                    await interaction.reply({
                         content: "The logging is already inactive",
                         flags: MessageFlags.Ephemeral
                     });
+
+                    return;
                 }
 
                 setLogStatus(interaction.guildId, false)
 
-                interaction.reply({
+                await interaction.reply({
                     content: "Logging is now inactive!",
                     flags: MessageFlags.Ephemeral
                 })
+
+                break;
             }
         }
     }
