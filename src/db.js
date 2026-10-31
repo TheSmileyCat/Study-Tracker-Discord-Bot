@@ -7,25 +7,37 @@ const db = new Database('data/study.db')
 db.pragma('journal_mode = WAL');
 
 db.exec(`
-    CREATE TABLE IF NOT EXISTS sessions (
-        id          INTEGER PRIMARY KEY,
-        user_id     TEXT NOT NULL,
-        guild_id    TEXT NOT NULL,
-        subject     TEXT NOT NULL,
-        minutes     INTEGER NOT NULL,
-        created_at  TEXT NOT NULL
+    CREATE TABLE IF NOT EXISTS users (
+        user_id         TEXT PRIMARY KEY,
+        total_minutes   INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE INDEX IF NOT EXISTS idx_sessions_guild_time
-        ON sessions (guild_id, created_at);
-    
+    CREATE TABLE IF NOT EXISTS user_subjects (
+        user_id     TEXT NOT NULL,
+        subject     TEXT NOT NULL,
+        minutes     INTEGER NOT NULL DEFAULT 0,
+        PRIMARY     KEY (user_id, subject)
+    );
+
+    CREATE TABLE IF NOT EXISTS guild_users (
+        guild_id    TEXT NOT NULL,
+        user_id     TEXT NOT NULL,
+        minutes     INTEGER NOT NULL DEFAULT 0,
+        PRIMARY     KEY (guild_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS guild_settings (
+        guild_id        TEXT PRIMARY KEY,
+        log_channel_id  TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS active_sessions (
         user_id     TEXT PRIMARY KEY,
         guild_id    TEXT NOT NULL,
         subject     TEXT NOT NULL,
-        started_at  TEXT NOT NULL
+        started_at  INTEGER NOT NULL
     );
-`);
+    `);
 
 export const getActiveSession = (userId) =>
     db.prepare('SELECT * FROM active_sessions WHERE user_id = ?')
@@ -46,12 +58,24 @@ export const endSession = db.transaction((userId) => {
 
     const minutes = calculateSessionLength(active.started_at)
 
-    db.prepare('INSERT INTO sessions (user_id, guild_id, subject, minutes, created_at) VALUES (?, ?, ?, ?, ?)')
-        .run(active.user_id, active.guild_id, active.subject, minutes, active.started_at);
+    db.prepare(`
+        INSERT INTO users (user_id, total_minutes) VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET total_minutes = total_minutes + excluded.total_minutes   
+    `).run(userId, minutes);
+
+    db.prepare(`
+        INSERT INTO user_subjects (user_id, subject, minutes) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET minutes = minutes + excluded.minutes   
+    `).run(userId, active.subject, minutes);
+    
+    db.prepare(`
+        INSERT INTO guild_users (guild_id, user_id, minutes) VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET minutes = minutes + excluded.minutes   
+    `).run(active.guild_id, userId, minutes);
 
     db.prepare('DELETE FROM active_sessions WHERE user_id = ?').run(userId);
 
-    return { subject: active.subject, minutes: minutes };
+    return { subject: active.subject, minutes: minutes, guildId: active.guild_id };
 });
 
 export default db;
