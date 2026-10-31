@@ -1,5 +1,5 @@
 import { InteractionContextType, SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, Message } from 'discord.js';
-import { setLogChannel, clearLogChannel, getLogChannel, getLogStatus, setLogStatus } from '../db.js';
+import { setLogChannel, getLogChannel, getLogStatus, setLogStatus } from '../db.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -74,7 +74,7 @@ export default {
                     return;
                 }
 
-                setLogStatus(interaction.guildID, true);
+                setLogStatus(interaction.guildId, true);
 
                 await interaction.reply({
                     content: "Logging is now active!",

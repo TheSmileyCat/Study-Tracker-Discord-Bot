@@ -1,5 +1,6 @@
 import { InteractionContextType, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {getActiveSession, startSession, endSession, calculateSessionLength} from '../db.js';
+import { sendSessionLog } from '../utils/sessionLog.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -66,6 +67,7 @@ export default {
                 await interaction.reply(
                     `Nice Work! You studied a total of **${result.minutes}** minutes for the subject **${result.subject}**`
                 );
+                await sendSessionLog(interaction.client, interaction.user, result);
                 break;
             }
 

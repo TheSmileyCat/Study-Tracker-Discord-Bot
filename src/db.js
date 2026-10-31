@@ -29,7 +29,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id        TEXT PRIMARY KEY,
         log_channel_id  TEXT,
-        log_active      TEXT NOT NULL DEFAULT false
+        log_active      TEXT NOT NULL DEFAULT 'false'
     );
 
     CREATE TABLE IF NOT EXISTS active_sessions (
@@ -66,12 +66,12 @@ export const endSession = db.transaction((userId) => {
 
     db.prepare(`
         INSERT INTO user_subjects (user_id, subject, minutes) VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET minutes = minutes + excluded.minutes   
+        ON CONFLICT(user_id, subject) DO UPDATE SET minutes = minutes + excluded.minutes   
     `).run(userId, active.subject, minutes);
     
     db.prepare(`
         INSERT INTO guild_users (guild_id, user_id, minutes) VALUES (?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET minutes = minutes + excluded.minutes   
+        ON CONFLICT(guild_id, user_id) DO UPDATE SET minutes = minutes + excluded.minutes   
     `).run(active.guild_id, userId, minutes);
 
     db.prepare('DELETE FROM active_sessions WHERE user_id = ?').run(userId);
@@ -91,12 +91,12 @@ export const clearLogChannel = (guildId) =>
 export const getLogChannel = (guildId) =>
     db.prepare('SELECT log_channel_id FROM guild_settings WHERE guild_id = ?').get(guildId)?.log_channel_id ?? null;
 
-export const getLogStatus = (guildId) => {
-    return db.prepare('SELECT log_active FROM guild_settings WHERE log_active = ?').get(guildId)?.log_active === "false" ? false: true;
-}
+export const getLogStatus = (guildId) =>
+    db
+        .prepare('SELECT log_active FROM guild_settings WHERE guild_id = ?')
+        .get(guildId)?.log_active === 'true';
 
-export const setLogStatus = (guildId, status) => {
-    const active = status === false ? "false": "true";
-    db.prepare('UPDATE guild_settings SET log_active = ? WHERE guild_id = ?').run(active, guildId);
-}
+export const setLogStatus = (guildId, status) =>
+    db.prepare('UPDATE guild_settings SET log_active = ? WHERE guild_id = ?').run(status ? 'true' : 'false', guildId);
+
 export default db;
